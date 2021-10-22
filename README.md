@@ -6,7 +6,8 @@ My python demo
 
 * Note: The core code for the project is ISD-Lab private.
 
-研究课题：差分隐私保护约束下集成分类算法的研究
+差分隐私保护约束下集成分类算法的研究
+
 Research on an Ensemble Classification Algorithm Based on Differential Privacy
 
 Keyword： Privacy protection, differential privacy, machine learning, AdaBoost.
