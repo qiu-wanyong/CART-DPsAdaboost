@@ -10,6 +10,8 @@
 
 Research on an Ensemble Classification Algorithm Based on Differential Privacy
 
+ ![](/result/Graphical_Abstract.png)
+
 ### Keyword
 
 Privacy protection, differential privacy, machine learning, AdaBoost.
