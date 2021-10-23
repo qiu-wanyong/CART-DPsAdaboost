@@ -11,6 +11,8 @@
 Research on an Ensemble Classification Algorithm Based on Differential Privacy
 
  ![](/result/Graphical_Abstract.png)
+ Figure 1 Structure diagram of ensemble classification model under differential privacy protection
+
 
 ### Keyword
 
