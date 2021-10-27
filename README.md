@@ -36,8 +36,8 @@ Configuration
 | **Quantity**            |    1                                                  |
 | ----------------------  | ----------------------------------------------------- |
 | **Before Configuration**| 8 core / 16G memory / 256G SSD                        |
-| **Runtime Environment** | Version: Pycharm>=2019; python>=3.7                   |
-| **Hashrate**            | To better                                             |
+| **Runtime Environment** | Version: Pycharm>=2019; Python>=3.7                   |
+| **Hashrate**            | Need better                                           |
 
 ## Run Test
 
