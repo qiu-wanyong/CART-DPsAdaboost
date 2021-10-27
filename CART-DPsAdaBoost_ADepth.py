@@ -1,18 +1,27 @@
 
 
-# Python3实现基于CART分类器的AdaBoost算法——CensusinCome分类
+# Python3实现基于CART分类器的AdaBoost算法——Adult分类
 import numpy as np
 from collections import OrderedDict # 集合
 
 import copy
 from math import log
 
-from read_data_adult_fig2 import dt_data_fig2, predict_data_fig2
+from read_data_adult_fig import dt_data_fig, predict_data_fig
 
+# In[31]:
+
+# 训练数据从1到1000
+def split_data(n, traindata=dt_data_fig):
+    split_data = {}
+    split_data[0] = {}
+    split_data[0]['train'] = traindata[0]['train'][:n, :]
+    split_data[0]['test'] = traindata[0]['test']
+    return split_data
 
 
 class CartAdaBoostAdult:
-    def __init__(self, tree_length, modelcount, e, sign='a', train_dtdata=dt_data_fig2, pre_dtdata=predict_data_fig2):
+    def __init__(self, tree_length, modelcount, e, train_dtdata, sign='a', pre_dtdata=predict_data_fig):
 
         self.e = e  # 产生噪声的参数
         self.sign = sign  # 值为e 模型为DPsAdaBoost，值为f 模型为CART，其他值为CARTAdaBoost
@@ -221,8 +230,8 @@ class CartAdaBoostAdult:
 
             self.fenlei_shujuji = copy.deepcopy(copy_dict)
 
-            print('所有节点的个数：', len(self.fenlei_shujuji))
-            print('需要分裂的数据集的个数：', len(self.node_shujuji))
+            # print('所有节点的个数：', len(self.fenlei_shujuji))
+            # print('需要分裂的数据集的个数：', len(self.node_shujuji))
 
         return 'done'
 
@@ -501,16 +510,6 @@ class CartAdaBoostAdult:
 
         return tp, tn, fp, fn
 
-    def get_f1score(self, pre_type, real_type):
-        tp, tn, fp, fn = self.get_tp_fp_fn_tn(pre_type, real_type)
-
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)
-
-        f1 = 2 * precision * recall / (precision + recall)
-
-        return f1, precision, recall
-
     def get_fpr_tpr(self, value_count, type_real, type_prediict):
         fpr_tpr = []
         for i in np.linspace(-1, 1, value_count):
@@ -565,11 +564,11 @@ class CartAdaBoostAdult:
             self.noderela = cc[0]
 
             prenum = self.pre_tree(self.pre_dtdata, 'e')
-
+            train_num = self.pre_tree(self.train_dtdata)
 
             if self.sign == 'e':  # 添加噪声
                 prenum = self.laplace_mech(prenum)
-
+                train_num = self.laplace_mech(train_num)
 
             elif self.sign == 'f':  # CART，直接返回结果
                 # 计算正确率
@@ -578,6 +577,8 @@ class CartAdaBoostAdult:
                 return pre_correct
             # Ada保存模型权重以及模型的预测结果
             model_result_dict[i] = {'m_weight': cc[2], 'predict_labe': np.array(prenum, dtype=np.float)}
+
+            model_result_dict2[i] = {'m_weight': cc[2], 'predict_labe': np.array(train_num, dtype=np.float)}
 
             if cc[1] == 1:
                 break
@@ -604,48 +605,56 @@ class CartAdaBoostAdult:
         last_predict_result = np.sign(last_result)
 
         # 计算预测样本的正确率
-        # pre_correct = self.compuer_correct(last_predict_result, self.pre_dtdata[:, -1])
+        pre_correct = self.compuer_correct(last_predict_result, self.pre_dtdata[:, -1])
 
         # # 记录每个模型的ROC曲线的数据
         # plot_xy, area = self.get_fpr_tpr(40, self.pre_dtdata[:, -1], last_result)
 
-        # 计算F1分数
-        f1, pre, sca = self.get_f1score(last_predict_result, self.pre_dtdata[:, -1])
 
-        return f1, pre, sca
+        # 计算训练样本的正确率
+        # 最终结果
+        last_result2 = np.array([0 for i in range(len(self.train_dtdata))], dtype=np.float)
+        for m2 in model_result_dict2:
+            last_result2 += model_result_dict2[m2]['m_weight'] * model_result_dict2[m2]['predict_labe']
 
+        # 最终的预测结果
+        last_result2 = np.where(last_result2 == 0, last_result2 / last_result2, last_result2)
+        last_predict_result2 = np.sign(last_result2)
+
+        # 计算预测样本的正确率
+        train_correct = self.compuer_correct(last_predict_result2, self.train_dtdata[:, -2])
+
+        return train_correct, pre_correct
+
+
+# 样本数量与模型准确率之间的关系
 
 # 树的深度列表
 tree_depth = [2, 3, 4, 5, 6]
 T = 10
 e = 1
-# 记录测试样本的f1,精确率，召回率
-f1_data_dict = OrderedDict()
-pre_data_dict = OrderedDict()
-sca_data_dict = OrderedDict()
+# 记录每个深度对应的训练样本和测试样本的准确率
+data_dict = OrderedDict()
 
-Tree_depth_list = [2, 3, 4, 5, 6]
+for t_d in tree_depth:
+    print('树深度', t_d)
+    data_dict[t_d] = []
+    for sample_count in range(2, 10):
+        print('样本数', sample_count)
+        train_split_data = split_data(sample_count)
 
-for e in [0.10, 0.25, 0.50, 0.75, 1.00]:
-    print('当前e=', e)
-    f1_data_dict[e] = []
-    pre_data_dict[e] = []
-    sca_data_dict[e] = []
-    for t_d in Tree_depth_list:
-        print('当前树的深度', t_d)
-        model = CartAdaBoostAdult(t_d, 10, e, sign='e')
+        # 引入模型 tree_length, modelcount, e, train_dtdata, sign='a'
+        new_model = CartAdaBoostAdult(t_d, 10, 1, train_split_data, 'e')
 
-        f1, pre, sca = model.AdaBoost_adult()
+        # 存储训练样本的正确率 以及测试样本的正确率
+        train_acc, predict_acc = new_model.AdaBoost_adult()
 
-        f1_data_dict[e].append(f1)
-        pre_data_dict[e].append(pre)
-        sca_data_dict[e].append(sca)
+        data_dict[t_d].append([train_acc, predict_acc])
 
-        print(f1, pre, sca)
+        print(train_acc, predict_acc)
 
-print(f1_data_dict)
-print(pre_data_dict)
-print(sca_data_dict)
+print(data_dict)
+#  绘制图
 
 import matplotlib.pyplot as plt
 from pylab import mpl  # 作图显示中文
@@ -653,51 +662,35 @@ mpl.rcParams['font.sans-serif'] = ['FangSong']
 mpl.rcParams['axes.unicode_minus'] = False
 
 
-def plot_dict(data_dict, title):
-    plt.figure(figsize=(7, 4.5), dpi=80)
-    for k, m, l in zip(data_dict, ['s', 'o', '^', 'v', 'D'], ['dotted', 'dashed',
-                                                              'dashdot', (0, (3, 1, 1, 1)), 'solid']):
+def plot_dict(data_dict):
+    for k in data_dict:
+        # 遍历深度
+        plt.figure(figsize=(7, 4.5), dpi=80)
+        acc_data = data_dict[k]
 
-        print(k, m, l)
+        train_data = [l[0] for l in acc_data]
 
-        plt.plot(Tree_depth_list, data_dict[k], marker=m, linestyle=l, label=r'$\epsilon=%.2f$' % k)
+        test_data = [l[1] for l in acc_data]
 
-    plt.xlabel('树深度 d')
-    plt.ylabel('%s' % title)
+        plt.plot(list(range(len(train_data))), train_data, c='r', label='Training dataset')
 
-    plt.xticks(Tree_depth_list)
+        plt.plot(list(range(len(test_data))), test_data, c='b', label='Testing dataset')
 
-    plt.yticks(np.linspace(0, 1, 6))
+        plt.xlabel('Number of Samples')
 
-    plt.legend(loc='upper left')
+        plt.ylabel('Accuracy(%)')
 
-    plt.savefig('%s.png' % title)
+        plt.xticks([10, 200, 400, 600, 800, 1000])
 
+        plt.yticks(np.linspace(0, 1, 6))
 
-# F1
-plot_dict(f1_data_dict, 'f1')
-# 精确率
-plot_dict(pre_data_dict, 'Presicion')
-# 召回率
-plot_dict(sca_data_dict, 'Recall')
+        plt.title('Adult数据集中样本数量与模型准确率之间的关系_加噪(树深度{})'.format(k))
+        plt.legend(loc='lower right')
 
+        plt.savefig('%s.png' % k)
+        plt.close()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+plot_dict(data_dict)
 
 
 

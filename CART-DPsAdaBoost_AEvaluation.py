@@ -1,21 +1,18 @@
 
-# coding: utf-8
 
-# In[1]:
-
-
-# Python3实现基于CART分类器的AdaBoost算法——成年人收入分类
+# Python3实现基于CART分类器的AdaBoost算法——Adult分类
 import numpy as np
-from collections import OrderedDict
+from collections import OrderedDict # 集合
+
 import copy
 from math import log
-from read_data import dt_data, predict_data
 
-# In[31]:
+from read_data_adult_fig2 import dt_data_fig2, predict_data_fig2
+
 
 
 class CartAdaBoostAdult:
-    def __init__(self, tree_length, modelcount, e, sign='a', train_dtdata=dt_data, pre_dtdata=predict_data):
+    def __init__(self, tree_length, modelcount, e, sign='a', train_dtdata=dt_data_fig2, pre_dtdata=predict_data_fig2):
 
         self.e = e  # 产生噪声的参数
         self.sign = sign  # 值为e 模型为DPsAdaBoost，值为f 模型为CART，其他值为CARTAdaBoost
@@ -24,7 +21,6 @@ class CartAdaBoostAdult:
 
         # 训练数据
         self.train_dtdata = train_dtdata[0]['train']
-
 
         # 验证数据
         self.test_dtdata = train_dtdata[0]['test']
@@ -46,19 +42,6 @@ class CartAdaBoostAdult:
         # 样本权重,初始为1
         self.weight_list = np.array([1 for i in range(len(self.train_dtdata))])
 
-    def noisyCount(self, sensitivety=1):
-        beta = sensitivety / self.e
-        n_values = []
-        for i in range(100):
-            u1 = np.random.random()
-            u2 = np.random.random()
-            if u1 <= 0.5:
-                n_value = -beta * np.log(1. - u2)
-            else:
-                n_value = beta * np.log(u2)
-            n_values.append(n_value)
-        return np.mean(n_values)
-
     #  根据类别的数组计算基尼指数
     def jini_zhishu(self, exlist, weightlist):
         """
@@ -70,13 +53,9 @@ class CartAdaBoostAdult:
         exlist = np.array(exlist)
         weightlist = np.array(weightlist)
         dnum = 0
-        leng = np.sum(weightlist)
-        if self.sign == 'e':
-            leng += self.noisyCount() # 样本权重的和
+        leng = np.sum(weightlist)  # 样本权重的和
         for hh in list(set(exlist)):
             sum_f = np.sum(weightlist[exlist == hh])
-            if self.sign == 'e':
-                sum_f += self.noisyCount()
             dnum += (sum_f / leng) ** 2
         return 1 - dnum
 
@@ -112,21 +91,14 @@ class CartAdaBoostAdult:
                 one_weight = self.weight_list[[int(f) for f in one_sign]]
                 two_weight = self.weight_list[[int(f) for f in two_sign]]
 
-                one_sum = np.sum(one_weight)
-                two_sum = np.sum(two_weight)
-
-                all_sum = one_sum + two_sum
-
-                if self.sign == 'e':
-                    one_sum += self.noisyCount()
-                    two_sum += self.noisyCount()
-                    all_sum += self.noisyCount()
 
                 # jini = (len(onelist) / length) * self.jini_zhishu(onelist) + (len(twolist) / length) * self.jini_zhishu(
                 #     twolist)
                 # 添加权重后
-                jini = one_sum / all_sum * self.jini_zhishu(onelist, one_weight) + \
-                       two_sum / all_sum * self.jini_zhishu(twolist, two_weight)
+                jini = (np.sum(one_weight) / sum(list(one_weight) + list(two_weight)) *
+                        self.jini_zhishu(onelist, one_weight) +
+                       np.sum(two_weight) / sum(list(one_weight) + list(two_weight)) *
+                        self.jini_zhishu(twolist, two_weight))
 
                 if jini <= save_ji:
                     save_ji = jini
@@ -151,22 +123,13 @@ class CartAdaBoostAdult:
                 two_sign = sample_sign[tezheng != mi]
                 one_weight = self.weight_list[[int(f) for f in one_sign]]
                 two_weight = self.weight_list[[int(f) for f in two_sign]]
-
-                one_sum = np.sum(one_weight)
-                two_sum = np.sum(two_weight)
-
-                all_sum = one_sum + two_sum
-
-                if self.sign == 'e':
-                    one_sum += self.noisyCount()
-                    two_sum += self.noisyCount()
-                    all_sum += self.noisyCount()
-
                 # jini = (len(onelist) / length) * self.jini_zhishu(onelist) + (len(twolist) / length) * self.jini_zhishu(
                 #     twolist)
                 # 添加权重后
-                jini = one_sum / all_sum * self.jini_zhishu(onelist, one_weight) + \
-                       two_sum / all_sum * self.jini_zhishu(twolist, two_weight)
+                jini = (np.sum(one_weight) / sum(list(one_weight) + list(two_weight)) *
+                        self.jini_zhishu(onelist, one_weight) +
+                       np.sum(two_weight) / sum(list(one_weight) + list(two_weight)) *
+                        self.jini_zhishu(twolist, two_weight))
 
                 if jini <= save_ji:
                     save_ji = jini
@@ -270,10 +233,7 @@ class CartAdaBoostAdult:
         for shuju in self.node_shujuji:
             zuihang = self.node_shujuji[shuju][:, -2]
             # 选择最多的
-            if self.sign == 'e':
-                duodict = {ik: list(zuihang).count(ik) + self.noisyCount() for ik in set(list(zuihang))}
-            else:
-                duodict = {ik: list(zuihang).count(ik) for ik in set(list(zuihang))}
+            duodict = {ik: list(zuihang).count(ik) for ik in set(list(zuihang))}
             # 在其中选择最多的
             shujuji_jieguo[shuju] = max(duodict.items(), key=lambda dw: dw[1])[0]
 
@@ -470,6 +430,7 @@ class CartAdaBoostAdult:
             real = self.test_dtdata[:, -1]
             # 计算正确率
             correct[jj] = self.compuer_correct(real, yuce)
+
         # 获得最大的，如果有相同的，获取数目最小的键
         num = 0
         leys = ''
@@ -478,8 +439,12 @@ class CartAdaBoostAdult:
                 num = correct[jj]
                 leys = jj
             elif num == correct[jj]:
-                if jj < leys:
+                try:
+                    if jj < leys:
+                        leys = jj
+                except TypeError:
                     leys = jj
+
         if self.sign == 'f':
             return treeset[leys], num
         else:
@@ -490,27 +455,106 @@ class CartAdaBoostAdult:
             train_real = self.train_dtdata[:, -2]
             # 计算错误率
             error = 1 - self.compuer_correct(train_real, train_yuce)
-            # 计算权重
-            model_weight = 0.5 * log((1 - error) / error, 10)
+
+            if 0 < error < 1:
+                # 计算权重
+                model_weight = 0.5 * log((1 - error) / error, 10)
+            elif error == 1:
+                model_weight = 0.5 * log((1 - 0.999) / 0.999, 10)
+            else:
+                model_weight = 0.5 * log((1 - 0.001) / 0.001, 10)
             # 更改样本的权重
             change_weight = self.weight_list * np.exp(-model_weight *
                                                       np.array(np.multiply(train_real, train_yuce), dtype=np.float))
             self.weight_list = change_weight / np.sum(change_weight)
-            print('训练样本权重', self.weight_list)
+
             return treeset[leys], num, model_weight
 
-
+    def noisyCount(self, sensitivety=1):
+        beta = sensitivety / self.e
+        n_values = []
+        for i in range(100):
+            u1 = np.random.random()
+            u2 = np.random.random()
+            if u1 <= 0.5:
+                n_value = -beta * np.log(1. - u2)
+            else:
+                n_value = beta * np.log(u2)
+            n_values.append(n_value)
+        return np.mean(n_values)
 
     def laplace_mech(self, data):
         for i in range(len(data)):
             data[i] += self.noisyCount()
         return data
 
+    def get_tp_fp_fn_tn(self, pre_type, real_type):
+        # 真正
+        tp = list(real_type[pre_type == real_type]).count(1)
+        # 真负
+        tn = list(real_type[pre_type == real_type]).count(-1)
+        # 假正
+        all_d = pre_type + real_type
+        fp = list(all_d[real_type == -1]).count(0)
+        # 假负
+        fn = list(all_d[real_type == 1]).count(0)
+
+        return tp, tn, fp, fn
+
+    def get_f1score(self, pre_type, real_type):
+        tp, tn, fp, fn = self.get_tp_fp_fn_tn(pre_type, real_type)
+
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+
+        f1 = 2 * precision * recall / (precision + recall)
+
+        return f1, precision, recall
+
+    def get_fpr_tpr(self, value_count, type_real, type_prediict):
+        fpr_tpr = []
+        for i in np.linspace(-1, 1, value_count):
+            bu = np.where(type_prediict < i, -type_prediict / type_prediict, type_prediict)
+            last_bu = np.where(bu >= i, bu / bu, bu)
+
+            tp, tn, fp, fn = self.get_tp_fp_fn_tn(last_bu, type_real)
+
+            fpr = fp / (fp + tn)
+
+            tpr = tp / (tp + fn)
+
+            fpr_tpr.append([fpr, tpr])
+
+        # 将FPR从的值小到大排列，组成X轴，对应的TPR为Y轴，构成ROC曲线
+        sort_gu = sorted(fpr_tpr, key=lambda x: x[0] * 10 + x[1])  # 保证FPR相同的，TPR大的在后面
+
+        # 返回绘图需要的点的xy。
+        plot_x = [h[0] for h in sort_gu]
+        plot_y = [h[1] for h in sort_gu]
+
+        if plot_x[0] != 0:
+            plot_x.insert(0, 0)
+            plot_y.insert(0, plot_y[0])
+
+        if plot_y[1] != 1:
+            plot_x.insert(-1, 1)
+            plot_y.insert(-1, plot_y[-1])
+
+        # 计算面积
+        area = 0
+        # 梯形法计算面积
+        for index, value in enumerate(plot_x[1:]):
+            area += (plot_x[index + 1] - plot_x[index]) * (plot_y[index + 1] + plot_y[index]) / 2
+
+        return [plot_x, plot_y], area
+
     def AdaBoost_adult(self):
         # 记录每一个模型的结果
         model_result_dict = {}
+        model_result_dict2 = {}
         for i in range(self.model_c):
             model_result_dict[i] = {}
+            model_result_dict2[i] = {}
             # 完全成长的树
             self.grow_tree()
             # 剪枝形成的树的集
@@ -519,9 +563,18 @@ class CartAdaBoostAdult:
             cc = self.jiaocha_tree(gu[0])
             # 根据最好的树预测新的数据集的结果
             self.noderela = cc[0]
+
             prenum = self.pre_tree(self.pre_dtdata, 'e')
-            if self.sign == 'f':  # CART
+
+
+            if self.sign == 'e':  # 添加噪声
+                prenum = self.laplace_mech(prenum)
+
+
+            elif self.sign == 'f':  # CART，直接返回结果
+                # 计算正确率
                 pre_correct = self.compuer_correct(prenum, self.pre_dtdata[:, -1])
+
                 return pre_correct
             # Ada保存模型权重以及模型的预测结果
             model_result_dict[i] = {'m_weight': cc[2], 'predict_labe': np.array(prenum, dtype=np.float)}
@@ -547,35 +600,113 @@ class CartAdaBoostAdult:
             last_result += model_result_dict[m]['m_weight'] * model_result_dict[m]['predict_labe']
 
         # 最终的预测结果
+        last_result = np.where(last_result == 0, last_result / last_result, last_result)
         last_predict_result = np.sign(last_result)
 
-        # 计算正确率
-        pre_correct = self.compuer_correct(last_predict_result, self.pre_dtdata[:, -1])
+        # 计算预测样本的正确率
+        # pre_correct = self.compuer_correct(last_predict_result, self.pre_dtdata[:, -1])
 
-        return pre_correct
+        # # 记录每个模型的ROC曲线的数据
+        # plot_xy, area = self.get_fpr_tpr(40, self.pre_dtdata[:, -1], last_result)
 
+        # 计算F1分数
+        f1, pre, sca = self.get_f1score(last_predict_result, self.pre_dtdata[:, -1])
 
-# In[38]:
+        return f1, pre, sca
 
 
 # 树的深度列表
-tree_depth_list = list(range(2, 11, 1))
+tree_depth = [2, 3, 4, 5, 6]
+T = 10
+e = 1
+# 记录测试样本的f1,精确率，召回率
+f1_data_dict = OrderedDict()
+pre_data_dict = OrderedDict()
+sca_data_dict = OrderedDict()
 
-correct_dict = OrderedDict({})
+Tree_depth_list = [2, 3, 4, 5, 6]
 
-# DPsAdaBoost模型
-#epsilon = [0.05,0.1,0.25,0.5,0.75,1]
-epsilon = [0.1,0.25,0.5]
-for e in epsilon:
-    correct_dict['DPsAdaBoost(e=%s)' % str(e)] = []
-    for tree_depth in tree_depth_list:
-        DPsAdaBoost_model = CartAdaBoostAdult(tree_depth, 30, e, 'e')
-        print('DPsAdaBoost：树的深度%d,基分类器个数%d,噪声参数%s'
-              % (DPsAdaBoost_model.tree_length, DPsAdaBoost_model.model_c, DPsAdaBoost_model.e))
-        c = DPsAdaBoost_model.AdaBoost_adult()
-        correct_dict['DPsAdaBoost(e=%s)' % str(e)].append(c)
-        print('准确率: ', c)
+# for e in [0.10, 0.25, 0.50, 0.75, 1.00]:
+#     print('当前e=', e)
+#     f1_data_dict[e] = []
+#     pre_data_dict[e] = []
+#     sca_data_dict[e] = []
+#     for t_d in Tree_depth_list:
+#         print('当前树的深度', t_d)
+#         model = CartAdaBoostAdult(t_d, 10, e, sign='e')
+#
+#         f1, pre, sca = model.AdaBoost_adult()
+#
+#         f1_data_dict[e].append(f1)
+#         pre_data_dict[e].append(pre)
+#         sca_data_dict[e].append(sca)
+#
+#         print(f1, pre, sca)
+
+print(f1_data_dict)
+print(pre_data_dict)
+print(sca_data_dict)
+
+f1_data_dict = OrderedDict([(0.1, [0.8115577889447236, 0.8214508418208272, 0.856510364258402, 0.8215991692627206, 0.8670911261440509]), (0.25, [0.8323340913789539, 0.8461538461538463, 0.8733293437063635, 0.8470829068577278, 0.8937000195045836]), (0.5, [0.8368442792234614, 0.8504996940648583, 0.8775347912524851, 0.8441798398686101, 0.9052224371373307]), (0.75, [0.8333333333333334, 0.8514972499490732, 0.8792692613185068, 0.8510811913504691, 0.903913211933359]), (1.0, [0.8376703841387857, 0.8488063660477453, 0.8822015442486636, 0.8514972499490732, 0.9039504260263361])])
+pre_data_dict = OrderedDict([(0.1, [0.9857578840284842, 0.9875062468765617, 0.9856415006947661, 0.9865336658354115, 0.9833032490974729]), (0.25, [0.9930932412432166, 0.9951876804619827, 0.9936450295052202, 0.9971084337349397, 0.9887785930082003]), (0.5, [0.9970472440944882, 0.9961777353081701, 0.9941441441441441, 0.997573993207181, 0.9915254237288136]), (0.75, [0.9980139026812314, 0.9957122439256789, 0.9946091644204852, 0.997131931166348, 0.9919217687074829]), (1.0, [0.9980314960629921, 0.9947393591582975, 0.9941990182954038, 0.9957122439256789, 0.9915038232795242])])
+sca_data_dict = OrderedDict([(0.1, [0.6896797153024911, 0.703202846975089, 0.7572953736654804, 0.703914590747331, 0.7754448398576512]), (0.25, [0.7163701067615659, 0.7359430604982207, 0.7790035587188612, 0.7362989323843416, 0.8153024911032029]), (0.5, [0.7209964412811388, 0.7419928825622776, 0.7854092526690392, 0.7316725978647687, 0.8327402135231317]), (0.75, [0.7153024911032029, 0.7437722419928826, 0.7879003558718861, 0.7423487544483985, 0.8302491103202847]), (1.0, [0.7217081850533807, 0.7402135231316725, 0.79288256227758, 0.7437722419928826, 0.8306049822064057])])
+
+import matplotlib.pyplot as plt
+from pylab import mpl  # 作图显示中文
+mpl.rcParams['font.sans-serif'] = ['FangSong']
+mpl.rcParams['axes.unicode_minus'] = False
 
 
-print(correct_dict)
+def plot_dict(data_dict, title, s='f'):
+    plt.figure(figsize=(7, 4.5), dpi=200)
+    for k, m, l in zip(data_dict, ['s', 'o', '^', 'v', 'D'], ['dotted', 'dashed',
+                                                              'dashdot', (0, (3, 1, 1, 1)), 'solid']):
+
+
+        plt.plot(Tree_depth_list, data_dict[k], marker=m, linestyle=l, label=r'$\epsilon=%.2f$' % k)
+
+    plt.xlabel('Depth')
+    plt.ylabel('%s' % title)
+
+    plt.xticks(Tree_depth_list)
+    if s == 'f':
+        plt.yticks(np.linspace(0.8, 1, 6))
+    elif s == 'p':
+        plt.yticks(np.linspace(0.98, 1, 6))
+    else:
+        plt.yticks(np.linspace(0.6, 0.8, 6))
+
+    plt.legend(loc='upper left')
+
+    plt.savefig('%s.png' % title)
+
+
+# F1
+plot_dict(f1_data_dict, 'F1', 'f')
+# 精确率
+plot_dict(pre_data_dict, 'Presicion', 'p')
+# 召回率
+plot_dict(sca_data_dict, 'Recall', 'r')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
