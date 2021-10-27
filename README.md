@@ -5,7 +5,7 @@
 
 * We provide a Python-based Demo of this project for readers' reference only.
 
-* Note: The core code for the project is ISD-Lab private.
+Note: The core code for the project is ISD-Lab private.
 
 
 ### CART-DPsAdaboost  [![DOI](doi.org/10.1109/ACCESS.2020.2995058)](https://ieeexplore.ieee.org/abstract/document/9094704)
