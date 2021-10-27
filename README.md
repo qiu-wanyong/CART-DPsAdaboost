@@ -47,6 +47,8 @@ Laplace noise test on Adult：
 
 > python [Adaboost_Adult-Laplace](Adaboost_Adult-Laplace)
 
+Test environment: Pycharm
+
 Only test on Adult and CensusinCome:
 
 > python [CART-DPsAdaBoost_Adult](CART-DPsAdaBoost_Adult)
